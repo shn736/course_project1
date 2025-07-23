@@ -3,53 +3,42 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 
-def reading_operations_excel(transactions_excel: str) -> Any:
-    """считывает финансовые операции из Excel выдает список словарей с транзакциями"""
-    try:
-        df = pd.read_excel(transactions_excel)
-        list_transaction_excel = df.to_dict(orient='records')
-        return list_transaction_excel
-    except FileNotFoundError:
-        return f"Ошибка: Файл не найден по указанному пути: {transactions_excel}"
-    except ValueError:
-        return "Ошибка: Не удалось прочитать файл. Убедитесь, что это файл Excel."
-    except Exception as e:
-        return f"Произошла ошибка: {e}"
+def main(date_str):
+    # Настройки
+    user_settings = load_user_settings('../user_settings.json')
+    user_currencies = user_settings['user_currencies']
+    user_stocks = user_settings['user_stocks']
 
-transactions = reading_operations_excel(transactions_excel='../data/operations.xlsx')
+    # Определение диапазона дат
+    request_date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+    start_date = request_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end_date = request_date
 
-# print(transactions)
-
-
-def parse_date(date_str: str) -> datetime:
-    """Парсит дату из строки в формате 'dd.mm.yyyy'."""
-    return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-
-def search_parse_date(search_date_str: str) -> datetime:
-    """Парсит дату из строки в формате 'dd.mm.yyyy'."""
-    return datetime.strptime(search_date_str, "%d.%m.%Y %H:%M:%S")
-
-def get_first_day_of_month(date: datetime) -> datetime:
-    """Возвращает первое число месяца заданной даты."""
-    return date.replace(day=1)
-
-
-def filter_and_sort_transactions(transactions: List[Dict[str, str]], target_date_str: str) -> List[Dict[str, str]]:
-    """Фильтрует и сортирует транзакции по дате в заданном диапазоне."""
-    target_date = parse_date(target_date_str)
-    start_date = get_first_day_of_month(target_date)
+    # Загрузка транзакций
+    transactions = load_transactions('../data/operations.xlsx')
 
     # Фильтрация транзакций по дате
-    filtered_transactions = [
-        txn for txn in transactions
-        if start_date <= search_parse_date(txn['Дата операции']) <= target_date
-    ]
+    #filtered_transactions = filter_transactions(transactions, start_date, end_date)
 
-    # Сортировка по дате
-    sorted_transactions = sorted(filtered_transactions, key=lambda x: search_parse_date(x['Дата операции']))
+    # Получение данных по картам
+    cards_data = calculate_card_data(transactions)
 
-    return sorted_transactions
+    # Получение Топ-5 транзакций
+    top_transactions = get_top_transactions(transactions)
 
-target_date = "2020-05-20 15:30:00"
-result = filter_and_sort_transactions(transactions, target_date)
-print(result)
+    # Получение курсов валют
+    currency_rates = get_currency_rates(user_currencies)
+
+    # Получение стоимости акций
+    stock_prices = get_stock_prices(user_stocks)
+
+    # Формирование JSON-ответа
+    response = {
+        "greeting": get_greeting(),
+        "cards": cards_data,
+        "top_transactions": top_transactions,
+        "currency_rates": currency_rates,
+        "stock_prices": stock_prices,
+    }
+
+    return json.dumps(response, ensure_ascii=False, indent=4)
