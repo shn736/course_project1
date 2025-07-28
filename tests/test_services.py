@@ -1,7 +1,5 @@
-import pytest
 import json
 from src.services import get_json_transfers
-import logs
 
 
 def test_get_json_transfers():

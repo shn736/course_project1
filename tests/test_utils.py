@@ -1,6 +1,6 @@
 import json
 import pytest
-from unittest.mock import patch, mock_open, Mock
+from unittest.mock import patch, mock_open
 from src.utils import (
     get_greeting,
     load_user_settings,
@@ -33,7 +33,6 @@ def test_load_user_settings(mock_file_data):
     with patch("builtins.open", mock_open(read_data=mock_file_data)):
         settings = load_user_settings("fake_path.json")
         assert settings == {'setting1': 'value1', 'setting2': 'value2'}
-
 
 
 def test_filter_and_sort_transactions(mock_transactions):
@@ -82,6 +81,7 @@ def test_get_stock_prices(mock_get):
     prices = get_stock_prices(['AAPL', 'GOOGL'])
     assert prices['AAPL'] == '150.00'
     assert prices['GOOGL'] == '150.00'
+
 
 @pytest.mark.parametrize("hour, expected_greeting", [
     (6, "Доброе утро"),

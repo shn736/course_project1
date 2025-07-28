@@ -1,11 +1,8 @@
 import json
-import pytest
 from unittest import mock
-
-# Предполагая, что ваша функция json_answer находится в модуле my_module
 from src.views import json_answer
 
-# Пример данных, которые могут возвращаться загружаемыми функциями
+
 mock_user_settings = {
     'user_currencies': ['USD', 'EUR'],
     'user_stocks': ['AAPL', 'GOOGL']
