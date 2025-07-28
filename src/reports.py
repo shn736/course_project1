@@ -6,7 +6,7 @@ from typing import Optional, Callable, Any
 
 logger = logging.getLogger('reports')
 logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler('../logs/reports.log')
+file_handler = logging.FileHandler('C:/Users/shn-7/PycharmProjects/course_project1/logs/reports.log')
 file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 file_handler.setFormatter(file_formatter)
 logger.addHandler(file_handler)
@@ -67,15 +67,15 @@ def spending_by_category(transactions: pd.DataFrame,
 
 
 # Пример использования
-if __name__ == "__main__":
-    # Пример данных
-    data = {
-        'date': ['2025-05-10', '2025-05-15', '2025-06-20', '2025-07-25'],
-        'amount': [100, 200, 300, 150],
-        'category': ['Food', 'Food', 'Transport', 'Food']
-    }
-    transactions_df = pd.DataFrame(data)
-
-    # Запрос трат по категории
-    result = spending_by_category(transactions_df, 'Food')
-    print(result)
+# if __name__ == "__main__":
+#     # Пример данных
+#     data = {
+#         'date': ['2025-05-10', '2025-05-15', '2025-06-20', '2025-07-25'],
+#         'amount': [100, 200, 300, 150],
+#         'category': ['Food', 'Food', 'Transport', 'Food']
+#     }
+#     transactions_df = pd.DataFrame(data)
+#
+#     # Запрос трат по категории
+#     result = spending_by_category(transactions_df, 'Food')
+#     print(result)
