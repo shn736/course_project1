@@ -1,92 +1,133 @@
 import json
-import datetime
-import random
+import os
+import logging
 import pandas as pd
-from typing import Any
+import requests
+from datetime import datetime
+from typing import Any, Dict
+from dotenv import load_dotenv
 
 
-def get_greeting(current_time):
-    """Возвращает приветствие в зависимости от времени суток."""
-    if current_time.hour < 6:
-        return "Доброй ночи"
-    elif 6 <= current_time.hour < 12:
+logger = logging.getLogger('utils')
+logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler('../logs/utils.log')
+file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
+
+
+def get_greeting() -> str:
+    """Определяет время суток"""
+    current_hour = datetime.now().hour
+    logger.info('Определяем время суток')
+    if 5 <= current_hour < 12:
         return "Доброе утро"
-    elif 12 <= current_time.hour < 18:
+    elif 12 <= current_hour < 18:
         return "Добрый день"
-    else:
+    elif 18 <= current_hour < 23:
         return "Добрый вечер"
+    else:
+        return "Доброй ночи"
 
-print(get_greeting(current_time=datetime.datetime.now().time()))
+
+def load_user_settings(filepath: Any) -> Any:
+    """Считывает пользовательские настройки"""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
 
 def reading_operations_excel(transactions_excel: str) -> Any:
     """считывает финансовые операции из Excel выдает список словарей с транзакциями"""
     try:
+        logger.info('Распаковываем EXCEL файл')
         df = pd.read_excel(transactions_excel)
         list_transaction_excel = df.to_dict(orient='records')
         return list_transaction_excel
     except FileNotFoundError:
+        logger.error('Файл не найден')
         return f"Ошибка: Файл не найден по указанному пути: {transactions_excel}"
     except ValueError:
+        logger.error('Не удалось прочитать файл')
         return "Ошибка: Не удалось прочитать файл. Убедитесь, что это файл Excel."
     except Exception as e:
+        logger.error(f'Произошла ошибка {e}')
         return f"Произошла ошибка: {e}"
 
-#print(reading_operations_excel(transactions_excel='../data/operations.xlsx'))
-transactions = reading_operations_excel(transactions_excel='../data/operations.xlsx')
 
-def get_card_details(transactions):
-    """Возвращает последние 4 цифры карты, сумму расходов и кешбэк."""
-    card_info = {}
-    total_spent = 0
+def parse_date(date_str: str) -> datetime:
+    """Парсит дату из строки в формате 'dd.mm.yyyy'."""
+    return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
 
+
+def search_parse_date(search_date_str: str) -> datetime:
+    """Парсит дату из строки в формате 'dd.mm.yyyy'."""
+    return datetime.strptime(search_date_str, "%d.%m.%Y %H:%M:%S")
+
+
+def get_first_day_of_month(date: datetime) -> datetime:
+    """Возвращает первое число месяца заданной даты."""
+    return date.replace(day=1)
+
+
+def filter_and_sort_transactions(transactions: dict, target_date_str: str) -> list[Any]:
+    """Фильтрует и сортирует транзакции по дате в заданном диапазоне."""
+    logger.info('Фильтруем и сортируем транзакции по дате в заданном диапазоне')
+    target_date = parse_date(target_date_str)
+    start_date = get_first_day_of_month(target_date)
+    filtered_transactions = [
+        txn for txn in transactions
+        if start_date <= search_parse_date(txn['Дата операции']) <= target_date
+    ]
+    sorted_transactions = sorted(filtered_transactions, key=lambda x: search_parse_date(x['Дата операции']))
+    return sorted_transactions
+
+
+def calculate_card_data(transactions: list[Any]) -> Dict:
+    """Выводим информацию по каждой карте"""
+    logger.info('Выводим информацию по каждой карте')
+    card_data = {}
     for transaction in transactions:
-        if type(transaction['Номер карты']) == str:
-            card_last4 = transaction['Номер карты'][-4:]
-            amount = transaction['Сумма операции']
-            total_spent += amount
+        card_last_digits = str(transaction['Номер карты'])[-4:]
+        amount = transaction['Сумма операции']
+        if card_last_digits not in card_data:
+            card_data[card_last_digits] = {'Общая сумма расходов': 0, 'Кешбэк': 0}
+        card_data[card_last_digits]['Общая сумма расходов'] += round(amount)
+        card_data[card_last_digits]['Кешбэк'] += round(amount / 100)  # 1 рубль на каждые 100 рублей
+    return card_data
 
-            if card_last4 not in card_info:
-                card_info[card_last4] = {
-                    "total_spent": 0,
-                    "transactions": []
-                }
 
-            card_info[card_last4]["total_spent"] += amount
-            card_info[card_last4]["transactions"].append(transaction)
-
-        # Добавляем кешбэк
-        for card in card_info.values():
-            card['Кэшбэк'] = card["total_spent"] // 100  # 1 рубль за 100 рублей
-
-        return card_info
-
-print(get_card_details(transactions))
-
-def get_top_transactions(transactions, top_n=5):
+def get_top_transactions(transactions: list[Any], top_n: int = 5) -> list[Any]:
     """Возвращает топ-N транзакций по сумме платежа."""
+    logger.info('Возвращает топ-5 транзакций по сумме платежа')
     return sorted(transactions, key=lambda x: x["Сумма операции"], reverse=True)[:top_n]
 
-print(get_top_transactions(transactions))
-def get_currency_rates():
-    """Возвращает пример курсов валют (можно получить данные из API для реальных данных)."""
-    return {
-        "USD": round(random.uniform(60, 100), 2),
-        "EUR": round(random.uniform(70, 120), 2),
-        "JPY": round(random.uniform(0.5, 1.5), 2)
-    }
+
+load_dotenv('../.env')
+API_KEY = os.getenv('API_KEY')
+API_KEY_STOCK2 = os.getenv('API_KEY_STOCK2')
 
 
-def get_sp500_stock_prices():
-    """Возвращает пример цен акций из S&P500 (можно получить данные из API для реальных данных)."""
-    return {
-        "AAPL": round(random.uniform(100, 200), 2),
-        "GOOGL": round(random.uniform(1000, 3000), 2),
-        "AMZN": round(random.uniform(1500, 3500), 2),
-        "MSFT": round(random.uniform(200, 300), 2),
-        "TSLA": round(random.uniform(600, 900), 2),
-    }
+def get_currency_rates(user_currencies: list) -> dict:
+    """Выводит курсы валют"""
+    logger.info('Выводим курсы валют')
+    rates = {}
+    for currency in user_currencies:
+        url = f"https://api.apilayer.com/exchangerates_data/latest?symbols=RUB&base={currency}"
+        headers = {"apikey": API_KEY}
+        payload: dict = {}
+        response = requests.get(url, headers=headers, data=payload)
+        rates[currency] = response.json().get('rates', {}).get('RUB')
+    return rates
 
 
-def main(date_time_str):
-    # Парсинг входной строки с датой и временем
-    current_time = datetime.strptime(date_time_str, "%Y-%m-%d %H:%M:%S")
+def get_stock_prices(user_stocks: list) -> dict:
+    """Выводим стоимость акций из S&P500"""
+    logger.info('Выводим стоимость акций из S&P500')
+    stock_prices = {}
+    for stock in user_stocks:
+        url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={stock}&apikey={API_KEY_STOCK2}'
+        response = requests.get(url)
+        print(response.text)
+        if response.ok:
+            stock_prices[stock] = response.json().get("Global Quote").get('05. price', None)
+    return stock_prices
