@@ -6,7 +6,7 @@ from typing import Optional, Callable, Any
 
 logger = logging.getLogger('reports')
 logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler('C:/Users/shn-7/PycharmProjects/course_project1/logs/reports.log')
+file_handler = logging.FileHandler('../logs/reports.log')
 file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s: %(message)s')
 file_handler.setFormatter(file_formatter)
 logger.addHandler(file_handler)
